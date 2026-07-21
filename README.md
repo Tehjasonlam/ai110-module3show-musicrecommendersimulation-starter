@@ -29,6 +29,31 @@ Some prompts to answer:
 
 You can include a simple diagram or bullet list if helpful.
 
+### My Design
+
+Real platforms like Spotify predict what you'll enjoy by combining two ideas:
+*collaborative filtering*, which recommends songs based on what similar
+listeners enjoyed, and *content-based filtering*, which matches songs to you
+using their own attributes like tempo, genre, and energy. At scale these run on
+millions of implicit signals — plays, skips, and saves — that my small
+simulation doesn't have. So my version is purely **content-based**: it compares
+each song's measured features against a stored taste profile and prioritizes
+closeness of vibe over raw popularity.
+
+- **Song features used:** `genre`, `mood`, `energy`, `valence`, `acousticness`.
+- **UserProfile stores:** `favorite_genre`, `favorite_mood`, `target_energy`, `likes_acoustic`.
+- **Scoring rule (one song):** each song earns weighted points for matching
+  genre (highest weight) and mood, plus a closeness score for how near its
+  energy is to the user's target (`1 - |song.energy - target_energy|`), plus a
+  bonus if its acousticness matches the user's acoustic preference.
+- **Ranking rule (list of songs):** every song is scored, the list is sorted
+  from highest to lowest score, and the top *k* songs are returned as
+  recommendations.
+
+Starting weight recipe: `genre = 2.0`, `mood = 1.5`, `energy closeness = 1.0`,
+`acoustic match = 0.5` — genre is weighted highest because it's the most
+reliable boundary of musical taste.
+
 ---
 
 ## Getting Started
