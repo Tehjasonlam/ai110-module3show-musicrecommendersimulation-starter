@@ -7,42 +7,78 @@ You will implement the functions in recommender.py:
 - load_songs
 - score_song
 - recommend_songs
+
+Stretch challenges demonstrated here:
+- Challenge 2: switchable scoring modes (Strategy pattern)
+- Challenge 3: diversity penalty across artists/genres
+- Challenge 4: formatted table output including the reasons per song
 """
 
-from src.recommender import load_songs, recommend_songs
+import textwrap
+
+from src.recommender import load_songs, recommend_songs, STRATEGIES
+
+# Challenge 4: use tabulate for a clean table, with an ASCII fallback so the
+# script still runs if the library isn't installed.
+try:
+    from tabulate import tabulate
+    HAS_TABULATE = True
+except ImportError:
+    HAS_TABULATE = False
 
 
-# A set of diverse taste profiles to stress-test the recommender, including an
-# adversarial profile with conflicting preferences (high energy + sad mood).
-PROFILES = {
-    "High-Energy Pop": {"genre": "pop", "mood": "happy", "energy": 0.9, "likes_acoustic": False},
-    "Chill Lofi": {"genre": "lofi", "mood": "chill", "energy": 0.35, "likes_acoustic": True},
-    "Deep Intense Rock": {"genre": "rock", "mood": "intense", "energy": 0.9, "likes_acoustic": False},
-    "Adversarial: High-Energy Sad": {"genre": "classical", "mood": "sad", "energy": 0.95, "likes_acoustic": True},
+# A rich profile that exercises the Challenge 1 advanced features
+# (decade, mood tags, popularity, instrumental preference, language).
+USER_PREFS = {
+    "genre": "pop",
+    "mood": "happy",
+    "energy": 0.8,
+    "likes_acoustic": False,
+    "decade": 2020,
+    "mood_tags": ["euphoric", "upbeat"],
+    "target_popularity": 85,
+    "likes_instrumental": False,
+    "language": "en",
 }
 
 
-def print_recommendations(name: str, user_prefs: dict, songs: list) -> None:
-    """Run the recommender for one profile and print its top 5 results."""
-    recommendations = recommend_songs(user_prefs, songs, k=5)
+def print_table(title: str, recommendations: list) -> None:
+    """Print recommendations as a formatted table including the reasons."""
+    rows = []
+    for rank, (song, score, explanation) in enumerate(recommendations, start=1):
+        reasons = "\n".join(textwrap.wrap(explanation, width=48))
+        rows.append([rank, song["title"], song["artist"], f"{score:.2f}", reasons])
 
-    print(f"\n=== {name} ===")
-    print(f"User profile: {user_prefs}")
-    print("\nTop recommendations:\n")
-    for rank, rec in enumerate(recommendations, start=1):
-        # You decide the structure of each returned item.
-        # A common pattern is: (song, score, explanation)
-        song, score, explanation = rec
-        print(f"{rank}. {song['title']} - {song['artist']}  (Score: {score:.2f})")
-        print(f"   Because: {explanation}")
-        print()
+    headers = ["#", "Title", "Artist", "Score", "Reasons"]
+    print(f"\n=== {title} ===")
+    if HAS_TABULATE:
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
+    else:
+        # Simple ASCII fallback.
+        print(" | ".join(headers))
+        print("-" * 80)
+        for r in rows:
+            print(f"{r[0]}. {r[1]} - {r[2]}  (Score: {r[3]})")
+            for line in r[4].splitlines():
+                print(f"     {line}")
 
 
 def main() -> None:
     songs = load_songs("data/songs.csv")
 
-    for name, user_prefs in PROFILES.items():
-        print_recommendations(name, user_prefs, songs)
+    print(f"\nUser profile: {USER_PREFS}")
+
+    # Challenge 2: run the same profile through each scoring mode.
+    for strategy in STRATEGIES.values():
+        recs = recommend_songs(USER_PREFS, songs, k=5, strategy=strategy)
+        print_table(f"Mode: {strategy.name}", recs)
+
+    # Challenge 3: compare balanced ranking with and without the diversity penalty.
+    balanced = STRATEGIES["balanced"]
+    print_table(
+        "Balanced + Diversity Penalty",
+        recommend_songs(USER_PREFS, songs, k=5, strategy=balanced, diversity=True),
+    )
 
 
 if __name__ == "__main__":

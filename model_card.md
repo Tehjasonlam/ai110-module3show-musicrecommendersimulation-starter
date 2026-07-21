@@ -5,6 +5,8 @@
 Give your model a short, descriptive name.  
 Example: **VibeFinder 1.0**  
 
+**VibeFinder 1.0**
+
 ---
 
 ## 2. Intended Use  
@@ -16,6 +18,20 @@ Prompts:
 - What kind of recommendations does it generate  
 - What assumptions does it make about the user  
 - Is this for real users or classroom exploration  
+
+VibeFinder suggests songs from a small catalog that match a user's stated taste.
+It generates a ranked top-5 list with a plain-language reason for each pick. It
+assumes the user can describe their taste as a favorite genre, a favorite mood,
+a target energy level, and whether they like acoustic music. This is a classroom
+project for learning how recommenders work — not a production system for real
+listeners.
+
+### Non-Intended Use
+
+VibeFinder should **not** be used to make real product recommendations, to judge
+the quality of any song or artist, or to draw conclusions about a genre. The
+catalog is tiny (18 songs) and the "mood" and "energy" values are made up for
+the exercise, so its output is illustrative only.
 
 ---
 
@@ -32,6 +48,16 @@ Prompts:
 
 Avoid code here. Pretend you are explaining the idea to a friend who does not program.
 
+VibeFinder gives every song a score and then lines them up from highest to
+lowest. A song earns points for matching what the user asked for. Matching the
+favorite genre is worth the most points, matching the mood is worth a bit less,
+and the song also earns points for having an energy level close to what the user
+wants — the closer it is, the more points it gets. There's a small bonus if the
+song's "acoustic" feel matches the user's preference. Add it all up, sort the
+list, and the top few songs become the recommendations. Compared to the starter
+code (which just returned the first few songs), I added the real scoring, the
+closeness math for energy, the reasons behind each pick, and the sorting step.
+
 ---
 
 ## 4. Data  
@@ -45,6 +71,15 @@ Prompts:
 - Did you add or remove data  
 - Are there parts of musical taste missing in the dataset  
 
+The catalog has 18 songs. Each song has a genre, a mood, and five numeric
+features on a 0.0–1.0 scale: energy, valence, danceability, acousticness, plus
+tempo in BPM. I started with 10 songs and added 8 to widen the variety, bringing
+in genres like hip-hop, edm, classical, country, r&b, metal, folk, and reggae,
+and moods like energetic, romantic, melancholy, and aggressive. Even so, a lot
+of real musical taste is missing: there are no lyrics or language, no era/decade,
+no live-vs-studio feel, and only one song per most genres — so the dataset is far
+too small to represent how people actually listen.
+
 ---
 
 ## 5. Strengths  
@@ -56,6 +91,14 @@ Prompts:
 - User types for which it gives reasonable results  
 - Any patterns you think your scoring captures correctly  
 - Cases where the recommendations matched your intuition  
+
+VibeFinder works best for users whose preferences agree with each other. The
+Chill Lofi profile is the clearest win: it surfaced *Library Rain* and *Midnight
+Coding* — quiet, acoustic, low-energy tracks — exactly what I'd expect. The
+energy-closeness rule works well too, correctly separating slow songs from fast
+ones and keeping high-energy picks together for the Pop and Rock profiles. When
+a user's genre, mood, and energy all point the same direction, the top result
+almost always feels right, and the "reasons" list makes it easy to see why.
 
 ---
 
@@ -192,6 +235,15 @@ Prompts:
 - Improving diversity among the top results  
 - Handling more complex user tastes  
 
+1. **Use more features in the score.** Fold in valence, danceability, and tempo
+   so the "vibe" is captured by more than genre, mood, and energy.
+2. **Soften the genre weight / add diversity.** Lower genre dominance or add a
+   rule that avoids filling the top 5 with one genre, so great mood-and-energy
+   matches in other genres aren't buried.
+3. **Support richer profiles.** Let users list several favorite genres or moods,
+   or weight their own preferences, so the system can handle taste that isn't a
+   single label.
+
 ---
 
 ## 9. Personal Reflection  
@@ -203,3 +255,19 @@ Prompts:
 - What you learned about recommender systems  
 - Something unexpected or interesting you discovered  
 - How this changed the way you think about music recommendation apps  
+
+My biggest learning moment was seeing that a "recommendation" is really just a
+score and a sort — there's no magic, just weights I chose. Watching *Gym Hero*
+outrank a better mood match for a "happy pop" user showed me how much power the
+weights hold, and how easily a small choice creates a filter bubble. AI tools
+helped me move fast: they drafted the CSV loader, suggested the energy-closeness
+formula, and explained `.sort()` vs `sorted()`. But I had to double-check them —
+for example, the starter import would have crashed under `python -m src.main`,
+and I needed to make sure the scoring weights matched the recipe I actually
+designed rather than whatever default was suggested. What surprised me most is
+how convincing simple math can feel: with just four features and clear reasons,
+the output really does read like a thoughtful recommendation. If I kept going,
+I'd add more features to the score and a diversity rule so the top 5 doesn't
+collapse onto one genre. This project made me realize the recommendation apps I
+use every day are the same idea scaled up — and that the weights behind them
+quietly shape what I get to discover.
