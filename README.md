@@ -54,6 +54,62 @@ Starting weight recipe: `genre = 2.0`, `mood = 1.5`, `energy closeness = 1.0`,
 `acoustic match = 0.5` — genre is weighted highest because it's the most
 reliable boundary of musical taste.
 
+### Example User Profile
+
+The recommender compares every song against a single taste profile like this:
+
+```python
+user_prefs = {
+    "favorite_genre": "lofi",
+    "favorite_mood": "chill",
+    "target_energy": 0.4,
+    "likes_acoustic": True,
+}
+```
+
+This profile is specific enough to tell "chill lofi" apart from "intense rock":
+a low `target_energy` (0.4) and the `lofi`/`chill` matches reward mellow tracks,
+while a high-energy rock song loses the genre point, the mood point, and most of
+the energy-closeness score — so the two land far apart in the ranking.
+
+### Finalized Algorithm Recipe
+
+For each song, add up:
+
+| Rule | Points |
+|---|---|
+| Genre matches `favorite_genre` | +2.0 |
+| Mood matches `favorite_mood` | +1.5 |
+| Energy closeness: `1 - abs(song.energy - target_energy)` | +0.0 to +1.0 |
+| Acousticness matches `likes_acoustic` preference | +0.5 |
+
+Then **rank**: sort all songs by total score (highest first) and return the top *k*.
+
+### Data Flow
+
+```
+Input                 Process (the loop)              Output
+-----                 ------------------              ------
+user_prefs  ─▶  for each song in songs.csv:   ─▶  ranked list
+              score_song(user_prefs, song)        top K songs
+              collect (song, score, reasons)      + explanations
+                        │
+                        ▼
+                 sort by score desc
+```
+
+### Potential Biases
+
+- **Genre over-prioritization:** with genre worth +2.0, a great mood-and-energy
+  match in a *different* genre can be buried beneath a weak same-genre song.
+- **Popularity blind spot / filter bubble:** the system only recommends more of
+  what the profile already likes, so it never surprises the user with something
+  new.
+- **Feature coverage:** it ignores tempo, valence, and danceability in the core
+  score, so two songs that "feel" very different can score identically.
+- **Single-profile assumption:** one static taste profile can't capture that
+  real listeners want different vibes at different times (focus vs workout).
+
 ---
 
 ## Getting Started
