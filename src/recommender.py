@@ -64,6 +64,12 @@ class Song:
     valence: float
     danceability: float
     acousticness: float
+    # Challenge 1 advanced features (defaulted so older constructors still work).
+    popularity: int = 0
+    release_decade: int = 0
+    mood_tags: str = ""
+    instrumentalness: float = 0.0
+    language: str = ""
 
 @dataclass
 class UserProfile:
@@ -75,6 +81,12 @@ class UserProfile:
     favorite_mood: str
     target_energy: float
     likes_acoustic: bool
+    # Optional preferences for the Challenge 1 advanced features.
+    decade: Optional[int] = None
+    mood_tags: Optional[List[str]] = None
+    target_popularity: Optional[float] = None
+    likes_instrumental: Optional[bool] = None
+    language: Optional[str] = None
 
 class Recommender:
     """
@@ -84,34 +96,33 @@ class Recommender:
     def __init__(self, songs: List[Song]):
         self.songs = songs
 
-    def _score(self, user: UserProfile, song: Song) -> Tuple[float, List[str]]:
-        """Score a Song dataclass against a UserProfile, returning (score, reasons)."""
-        score = 0.0
-        reasons: List[str] = []
+    def _score(
+        self, user: UserProfile, song: Song, strategy: Optional[ScoringStrategy] = None
+    ) -> Tuple[float, List[str]]:
+        """Score a Song against a UserProfile by delegating to score_song().
 
-        if song.genre == user.favorite_genre:
-            score += GENRE_WEIGHT
-            reasons.append(f"genre match ({song.genre}) (+{GENRE_WEIGHT})")
+        score_song() is the single source of truth for the scoring formula; this
+        method just translates the dataclasses into the dict shape it expects, so
+        the OOP and functional paths can never drift apart.
+        """
+        user_prefs = {
+            "genre": user.favorite_genre,
+            "mood": user.favorite_mood,
+            "energy": user.target_energy,
+            "likes_acoustic": user.likes_acoustic,
+            "decade": user.decade,
+            "mood_tags": user.mood_tags,
+            "target_popularity": user.target_popularity,
+            "likes_instrumental": user.likes_instrumental,
+            "language": user.language,
+        }
+        weights = strategy.weights if strategy is not None else DEFAULT_WEIGHTS
+        return score_song(user_prefs, vars(song), weights)
 
-        if song.mood == user.favorite_mood:
-            score += MOOD_WEIGHT
-            reasons.append(f"mood match ({song.mood}) (+{MOOD_WEIGHT})")
-
-        energy_points = ENERGY_WEIGHT * (1 - abs(song.energy - user.target_energy))
-        score += energy_points
-        reasons.append(f"energy close to {user.target_energy} (+{energy_points:.2f})")
-
-        is_acoustic = song.acousticness >= 0.5
-        if is_acoustic == user.likes_acoustic:
-            score += ACOUSTIC_WEIGHT
-            reasons.append(f"acoustic preference match (+{ACOUSTIC_WEIGHT})")
-
-        return score, reasons
-
-    def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
+    def recommend(self, user: UserProfile, k: int = 5, strategy: Optional[ScoringStrategy] = None) -> List[Song]:
         """Return the top k songs ranked highest-to-lowest by their score."""
         # Judge every song, then rank: sorted() returns a new list without mutating self.songs.
-        ranked = sorted(self.songs, key=lambda s: self._score(user, s)[0], reverse=True)
+        ranked = sorted(self.songs, key=lambda s: self._score(user, s, strategy)[0], reverse=True)
         return ranked[:k]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
